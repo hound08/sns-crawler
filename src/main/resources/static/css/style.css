@@ -1,0 +1,22 @@
+.container {
+	max-width: 960px;
+}
+
+#div_loading {  
+	position:absolute;
+	left:0;
+	top:0;
+	z-index:1;  
+	background-color:#000;  
+}
+
+#img_loading {
+	position:absolute;
+	width: 300px;
+	height: 300px;
+	z-index:2;
+}
+
+.div_result_insta_account, .div_result_naver_media, .div_result_youtube_videoInfo {
+	display: none;
+}

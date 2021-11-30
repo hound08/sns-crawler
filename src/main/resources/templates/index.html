@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ko">
+
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" sizes="32x32"  href="/image/favicon-32x32.png">
+<title>SNS 크롤러</title>
+
+<!-- 공용 시트 -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- 전용 시트 -->
+<link href="/css/style.css" rel="stylesheet">
+</head>
+
+<body>
+<div class="container">
+	<main>
+		<div class="py-5 text-center">
+			<img class="d-block mx-auto mb-4" src="/image/logo.png" alt="로고" width="72">
+			<h2>SNS 크롤러</h2>
+			<p class="lead">설정 값 입력 후 크롤링 시작 버튼을 눌러주세요.</p>
+		</div>
+
+		<div class="row g-5">
+			<div class="col-md-11 col-lg-12">
+				<h4 class="mb-3">설정</h4>
+				<form id="form_crawling" class="needs-validation" novalidate>
+					<div class="my-3">
+						<div class="form-check">
+							<input id="credit" name="sns_type" type="radio" class="form-check-input" value="insta" checked required>
+							<label class="form-check-label" for="credit">인스타그램</label>
+							<div class="form-check">
+								<input id="radio_insta_media" name="insta_type" type="radio" class="form-check-input" value="media" checked required>
+								<label class="form-check-label" for="radio_insta_media">게시물 정보</label>
+							</div>
+							<div class="form-check">
+								<input id="radio_insta_account" name="insta_type" type="radio" class="form-check-input" value="account" required>
+								<label class="form-check-label" for="radio_insta_account">계정 정보</label>
+							</div>
+						</div>
+						<div class="form-check">
+							<input id="debit" name="sns_type" type="radio" class="form-check-input" value="naver" required>
+							<label class="form-check-label" for="debit">네이버 블로그</label>
+						</div>
+						<div class="form-check">
+							<input id="youtube" name="sns_type" type="radio" class="form-check-input" value="youtube" required>
+							<label class="form-check-label" for="youtube">유튜브</label>
+						</div>
+					</div>
+					
+					<div class="row g-3">
+						<div class="col-12">
+							<label for="email" class="form-label label_input">게시물 URL <span class="text-muted">(공개 계정만 가능)</span></label>
+							<input type="text" class="form-control" id="sns_url" placeholder="https://www.instagram.com/p/CDEFGHIJKLM/" required="">
+							<div class="invalid-feedback div_input_data">크롤링 할 게시물의 URL를 입력해주세요.</div>
+						</div>
+					</div>
+					
+					<button id="button_submit" class="w-100 btn btn-primary btn-lg mt-3" type="button">크롤링 시작하기</button>
+				</form>
+				
+				<hr class="my-4">
+
+				<h4 class="mb-3">결과</h4>
+				<div class="row gy-3 div_result div_result_insta_media">
+					<div class="col-12">
+						<label class="form-label">인스타그램 게시물 정보</label>
+						<p>
+							<small>결과: <span class="text-secondary span_result">-</span></small><br>
+							<small>작성자: <span class="text-secondary span_userName">-</span></small><br>
+							<small>작성자 고유번호: <span class="text-secondary span_userNum">-</span></small><br>
+							<small>게시물 ID: <span class="text-secondary span_postId">-</span></small><br>
+							<small>게시물 썸네일: <span class="text-secondary span_thumbImg">-</span></small><br>
+							<small>내용: <span class="text-secondary span_contents">-</span></small><br>
+							<small>좋아요 개수: <span class="text-secondary span_likeCnt">-</span></small><br>
+							<small>댓글 개수: <span class="text-secondary span_commentCnt">-</span></small><br>
+							<small>작성일: <span class="text-secondary span_postedAt">-</span></small><br>
+							<small>동영상 재생횟수: <span class="text-secondary span_videoViewCnt">-</span></small><br>
+							<small>게시물 단축코드: <span class="text-secondary span_shortCode">-</span></small><br>
+							<small>게시물 주소: <span class="text-secondary span_url">-</span></small><br>
+							<small>게시물 종류: <span class="text-secondary span_type">-</span></small>
+						</p>
+					</div>
+				</div>
+				<div class="row gy-3 div_result div_result_insta_account">
+					<div class="col-12">
+						<label class="form-label">인스타그램 계정 정보</label>
+						<p>
+							<small>결과: <span class="text-secondary span_result">-</span></small><br>
+							<small>계정 고유번호: <span class="text-secondary span_identifier">-</span></small><br>
+							<small>계정명: <span class="text-secondary span_username">-</span></small><br>
+							<small>이름: <span class="text-secondary span_full_name">-</span></small><br>
+							<small>소개글: <span class="text-secondary span_biography">-</span></small><br>
+							<small>게시물 개수: <span class="text-secondary span_media_count">-</span></small><br>
+							<small>팔로워 수: <span class="text-secondary span_followed_by_count">-</span></small><br>
+							<small>팔로우 수: <span class="text-secondary span_follows_count">-</span></small><br>
+							<small>프로필 이미지: <span class="text-secondary span_profile_pic_url">-</span></small>
+						</p>
+					</div>
+				</div>
+				<div class="row gy-3 div_result div_result_naver_media">
+					<div class="col-12">
+						<label class="form-label">네이버 블로그 정보</label>
+						<p>
+							<small>결과: <span class="text-secondary span_result">-</span></small><br>
+							<small>게시물 주소: <span class="text-secondary span_url">-</span></small><br>
+							<small>제목: <span class="text-secondary span_title">-</span></small><br>
+							<small>작성자: <span class="text-secondary span_name">-</span></small><br>
+							<small>작성일: <span class="text-secondary span_post_date">-</span></small><br>
+							<small>좋아요 개수: <span class="text-secondary span_like_cnt">-</span></small><br>
+							<small>댓글 개수: <span class="text-secondary span_reply_cnt">-</span></small><br>
+							<small>게시물 이미지: <span class="text-secondary span_img_src">-</span></small><br>
+							<small>내용: <span class="text-secondary span_content">-</span></small>
+						</p>
+					</div>
+				</div>
+				<div class="row gy-3 div_result div_result_youtube_videoInfo">
+					<div class="col-12">
+						<label class="form-label">유튜브 동영상 정보</label>
+						<p>
+							<small>결과: <span class="text-secondary span_result">-</span></small><br>
+							<small>게시자: <span class="text-secondary span_ownerName">-</span></small><br>
+							<small>제목: <span class="text-secondary span_videoTitle">-</span></small><br>
+							<small>게시일: <span class="text-secondary span_postingDate">-</span></small><br>
+							<small>조회 수: <span class="text-secondary span_viewCount">-</span></small><br>
+							<small>좋아요 수: <span class="text-secondary span_likeCount">-</span></small><br>
+							<small>댓글 수: <span class="text-secondary span_commentCount">-</span></small><br>
+							<small>프로필 이미지: <span class="text-secondary span_ownerImg">-</span></small><br>
+							<small>동영상 썸네일: <span class="text-secondary span_videoThumbnail">-</span></small><br>
+						</p>
+					</div>
+				</div>
+				<div class="row gy-3">
+					<div class="col-12">
+						<label class="form-label">JSON</label>
+						<textarea id="textarea_result" class="form-control" rows="4" readonly required></textarea>
+						<div class="invalid-feedback">결과 값이 없습니다.</div>
+					</div>
+				</div>
+				
+				<button id="button_copy" class="w-100 btn btn-secondary btn-lg mt-3" type="button">결과 복사하기</button>
+			</div>
+		</div>
+	</main>
+	
+	<footer class="my-5 pt-5 text-muted text-center text-small">
+		<p class="mb-1">&copy; 2021 주식회사 퀸즈코퍼레이션</p>
+	</footer>
+</div>
+
+<!-- 공용 스크립트 -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- 전용 스크립트 -->
+<script src="/js/script.js"></script>
+</body>
+
+</html>
