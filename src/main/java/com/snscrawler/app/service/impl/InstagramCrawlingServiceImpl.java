@@ -53,7 +53,7 @@ public class InstagramCrawlingServiceImpl implements InstagramCrawlingService {
 		
 		// 계정 정보 가져오기
 		Random random = new Random();
-		List<AccountEntity> account_list = accountRepository.findByBlock(1);
+		List<AccountEntity> account_list = accountRepository.findByBlock(2);
 		AccountEntity profile_entity = account_list.get(random.nextInt(account_list.size()));
 		
 		// 드라이버 설정
@@ -93,109 +93,243 @@ public class InstagramCrawlingServiceImpl implements InstagramCrawlingService {
 				
 				json_string = json_string.replace("<html><head></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">", "");
 				json_string = json_string.replace("</pre></body></html>", "");
-				JSONParser parser = new JSONParser();
-				JSONObject json_object = (JSONObject) parser.parse(json_string);
 				
-				try {
-					json_object = (JSONObject) json_object.get("graphql");
-					json_object = (JSONObject) json_object.get("shortcode_media");
-				} catch (Exception e) {
-					log.error("오류 발생!: " + url + " 게시물 없음");
+				// JSON 형식에 따른 파싱 분류
+				if (json_string.indexOf("graphql") > -1) {
+					// 'graphql' 형식
+					JSONParser parser = new JSONParser();
+					JSONObject json_object = (JSONObject) parser.parse(json_string);
 					
-					if (driver != null) {
-						driver.quit();
+					try {
+						json_object = (JSONObject) json_object.get("graphql");
+						json_object = (JSONObject) json_object.get("shortcode_media");
+					} catch (Exception e) {
+						log.error("오류 발생!: " + url + " 게시물 없음");
+						
+						if (driver != null) {
+							driver.quit();
+						}
+						
+						result_map.put("proxy", profile_entity.getProxy());
+						result_map.put("account", profile_entity.getId());
+						result_map.put("url", url);
+						result_map.put("result", false);
+						result_map.put("message", "게시물 없음");
+						
+						return result_map;
 					}
 					
-					result_map.put("proxy", profile_entity.getProxy());
-					result_map.put("account", profile_entity.getId());
-					result_map.put("url", url);
-					result_map.put("result", false);
-					result_map.put("message", "게시물 없음");
+					Thread.sleep(4000);
 					
-					return result_map;
-				}
-				
-				// 작성자 이름
-				JSONObject json_object_owner = (JSONObject) json_object.get("owner");
-				String userName = json_object_owner.get("username").toString();
-				
-				// 작성자 ID
-				String userNum = json_object_owner.get("id").toString();
-				
-				// 댓글 개수
-				JSONObject json_object_commentCnt = (JSONObject) json_object.get("edge_media_to_parent_comment");
-				int commentCnt = Integer.parseInt(json_object_commentCnt.get("count").toString());
-				
-				// 게시물 ID
-				String postId = json_object.get("id").toString();
-				
-				// 게시물 썸네일
-				String thumbImg = json_object.get("display_url").toString();
-				thumbImg = thumbImg.replaceAll("&amp;", "&");
-				
-				// 내용
-				String contents = "";
-				
-				try {
-					JSONObject json_object_contents = (JSONObject) json_object.get("edge_media_to_caption");
-					JSONArray json_array_contents = (JSONArray) json_object_contents.get("edges");
-					json_object_contents = (JSONObject) json_array_contents.get(0);
-					json_object_contents = (JSONObject) json_object_contents.get("node");
-					contents = json_object_contents.get("text").toString();
-					contents = contents.replaceAll("&amp;", "&");
-				} catch (Exception e) {}
-				
-				// 좋아요 개수
-				JSONObject json_object_likeCnt = (JSONObject) json_object.get("edge_media_preview_like");
-				int likeCnt = Integer.parseInt(json_object_likeCnt.get("count").toString());
-				
-				if (likeCnt < 0) {
-					likeCnt = 0;
-				}
-				
-				// 작성일
-				String taken_at_timestamp = json_object.get("taken_at_timestamp").toString();
-				String postedAt = Instant.ofEpochSecond(Long.parseLong(taken_at_timestamp)).atZone(ZoneId.of("Asia/Seoul")).toString();
-				postedAt = postedAt.replace("T", " ");
-				postedAt = postedAt.replace("+09:00[Asia/Seoul]", "");
-				
-				// 게시물 주소
-				String shortCode = json_object.get("shortcode").toString();
-				
-				// 동영상 조회수
-				int videoViewCnt = 0;
-				
-				if (json_string.indexOf("video_view_count") > -1) {
-					videoViewCnt = Integer.parseInt(json_string.substring(json_string.indexOf("video_view_count") + 18, json_string.indexOf("video_play_count") - 2));
-				}
-				
-				// 게시물 타입
-				String type = json_object.get("__typename").toString();
-				
-				if ("GraphSidecar".equals(type)) {
-					type = "sidecar";
-				} else if ("GraphImage".equals(type)) {
-					type = "image";
-				} else if ("GraphVideo".equals(type)) {
-					type = "video";
+					// 작성자 이름
+					JSONObject json_object_owner = (JSONObject) json_object.get("owner");
+					String userName = json_object_owner.get("username").toString();
+					
+					// 작성자 ID
+					String userNum = json_object_owner.get("id").toString();
+					
+					// 댓글 개수
+					JSONObject json_object_commentCnt = (JSONObject) json_object.get("edge_media_to_parent_comment");
+					int commentCnt = Integer.parseInt(json_object_commentCnt.get("count").toString());
+					
+					// 게시물 ID
+					String postId = json_object.get("id").toString();
+					
+					// 게시물 썸네일
+					String thumbImg = json_object.get("display_url").toString();
+					thumbImg = thumbImg.replaceAll("&amp;", "&");
+					
+					// 내용
+					String contents = "";
+					
+					try {
+						JSONObject json_object_contents = (JSONObject) json_object.get("edge_media_to_caption");
+						JSONArray json_array_contents = (JSONArray) json_object_contents.get("edges");
+						json_object_contents = (JSONObject) json_array_contents.get(0);
+						json_object_contents = (JSONObject) json_object_contents.get("node");
+						contents = json_object_contents.get("text").toString();
+						contents = contents.replaceAll("&amp;", "&");
+					} catch (Exception e) {}
+					
+					// 좋아요 개수
+					JSONObject json_object_likeCnt = (JSONObject) json_object.get("edge_media_preview_like");
+					int likeCnt = Integer.parseInt(json_object_likeCnt.get("count").toString());
+					
+					if (likeCnt < 0) {
+						likeCnt = 0;
+					}
+					
+					// 작성일
+					String taken_at_timestamp = json_object.get("taken_at_timestamp").toString();
+					String postedAt = Instant.ofEpochSecond(Long.parseLong(taken_at_timestamp)).atZone(ZoneId.of("Asia/Seoul")).toString();
+					postedAt = postedAt.replace("T", " ");
+					postedAt = postedAt.replace("+09:00[Asia/Seoul]", "");
+					
+					// 게시물 주소
+					String shortCode = json_object.get("shortcode").toString();
+					
+					// 동영상 조회수
+					int videoViewCnt = 0;
+					
+					if (json_string.indexOf("video_view_count") > -1) {
+						videoViewCnt = Integer.parseInt(json_string.substring(json_string.indexOf("video_view_count") + 18, json_string.indexOf("video_play_count") - 2));
+					}
+					
+					// 게시물 타입
+					String type = json_object.get("__typename").toString();
+					
+					if ("GraphSidecar".equals(type)) {
+						type = "sidecar";
+					} else if ("GraphImage".equals(type)) {
+						type = "image";
+					} else if ("GraphVideo".equals(type)) {
+						type = "video";
+					} else {
+						type = "unknown";
+					}
+					
+					// 게시물 정보
+					result_map.put("userName", userName);
+					result_map.put("commentCnt", commentCnt);
+					result_map.put("postId", postId);
+					result_map.put("contents", contents);
+					result_map.put("likeCnt", likeCnt);
+					result_map.put("postedAt", postedAt);
+					result_map.put("thumbImg", thumbImg);
+					result_map.put("shortCode", shortCode);
+					result_map.put("result", true);
+					result_map.put("userNum", userNum);
+					result_map.put("videoViewCnt", videoViewCnt);
+					result_map.put("url", url);
+					result_map.put("type", type);
 				} else {
-					type = "unknown";
+					// 'items' 형식
+					JSONParser parser = new JSONParser();
+					JSONObject json_object = (JSONObject) parser.parse(json_string);
+					
+					try {
+						JSONArray json_array_items = (JSONArray) json_object.get("items");
+						json_object = (JSONObject) json_array_items.get(0);
+					} catch (Exception e) {
+						log.error("오류 발생!: " + url + " 게시물 없음");
+						
+						if (driver != null) {
+							driver.quit();
+						}
+						
+						result_map.put("proxy", profile_entity.getProxy());
+						result_map.put("account", profile_entity.getId());
+						result_map.put("url", url);
+						result_map.put("result", false);
+						result_map.put("message", "게시물 없음");
+						
+						return result_map;
+					}
+					
+					Thread.sleep(4000);
+					
+					// 작성자 이름
+					JSONObject json_object_user = (JSONObject) json_object.get("user");
+					String userName = json_object_user.get("username").toString();
+					
+					// 작성자 ID
+					String userNum = json_object_user.get("pk").toString();
+					
+					// 댓글 개수
+					int commentCnt = 0;
+					
+					try {
+						commentCnt = Integer.parseInt(json_object.get("comment_count").toString());
+					} catch (Exception e) {}
+					
+					// 게시물 ID
+					String postId = json_object.get("pk").toString();
+					
+					// 게시물 썸네일
+					String thumbImg = "";
+					
+					try {
+						JSONArray json_array_carousel_media = (JSONArray) json_object.get("carousel_media");
+						JSONObject json_object_carousel_media = (JSONObject) json_array_carousel_media.get(0);
+						JSONObject json_object_image_versions2 = (JSONObject) json_object_carousel_media.get("image_versions2");
+						JSONArray json_array_candidates = (JSONArray) json_object_image_versions2.get("candidates");
+						JSONObject json_object_candidates = (JSONObject) json_array_candidates.get(0);
+						thumbImg = json_object_candidates.get("url").toString();
+						thumbImg = thumbImg.replaceAll("&amp;", "&");
+					} catch (Exception e) {}
+					
+					if ("".equals(thumbImg)) {
+						try {
+							JSONObject json_object_image_versions2 = (JSONObject) json_object.get("image_versions2");
+							JSONArray json_array_candidates = (JSONArray) json_object_image_versions2.get("candidates");
+							JSONObject json_object_candidates = (JSONObject) json_array_candidates.get(0);
+							thumbImg = json_object_candidates.get("url").toString();
+							thumbImg = thumbImg.replaceAll("&amp;", "&");
+						} catch (Exception e) {}
+					}
+					
+					// 내용
+					String contents = "";
+					
+					try {
+						JSONObject json_object_caption = (JSONObject) json_object.get("caption");
+						contents = json_object_caption.get("text").toString();
+						contents = contents.replaceAll("&amp;", "&");
+					} catch (Exception e) {}
+					
+					// 좋아요 개수
+					int likeCnt = Integer.parseInt(json_object.get("like_count").toString());
+					
+					if (likeCnt < 0) {
+						likeCnt = 0;
+					}
+					
+					// 작성일
+					String taken_at = json_object.get("taken_at").toString();
+					String postedAt = Instant.ofEpochSecond(Long.parseLong(taken_at)).atZone(ZoneId.of("Asia/Seoul")).toString();
+					postedAt = postedAt.replace("T", " ");
+					postedAt = postedAt.replace("+09:00[Asia/Seoul]", "");
+					
+					// 게시물 주소
+					String shortCode = json_object.get("code").toString();
+					
+					// 동영상 조회수 (items 형식에선 미출력)
+					int videoViewCnt = 0;
+					
+					/* if (json_string.indexOf("video_view_count") > -1) {
+						videoViewCnt = Integer.parseInt(json_string.substring(json_string.indexOf("video_view_count") + 18, json_string.indexOf("video_play_count") - 2));
+					} */
+					
+					// 게시물 타입 (items 형식에선 미출력)
+					/* String type = json_object.get("__typename").toString();
+					
+					if ("GraphSidecar".equals(type)) {
+						type = "sidecar";
+					} else if ("GraphImage".equals(type)) {
+						type = "image";
+					} else if ("GraphVideo".equals(type)) {
+						type = "video";
+					} else {
+						type = "unknown";
+					} */
+					
+					String type = "sidecar";
+					
+					// 정보 취합
+					result_map.put("userName", userName);
+					result_map.put("commentCnt", commentCnt);
+					result_map.put("postId", postId);
+					result_map.put("contents", contents);
+					result_map.put("likeCnt", likeCnt);
+					result_map.put("postedAt", postedAt);
+					result_map.put("thumbImg", thumbImg);
+					result_map.put("shortCode", shortCode);
+					result_map.put("result", true);
+					result_map.put("userNum", userNum);
+					result_map.put("videoViewCnt", videoViewCnt);
+					result_map.put("url", url);
+					result_map.put("type", type);
 				}
-				
-				// 게시물 정보
-				result_map.put("userName", userName);
-				result_map.put("commentCnt", commentCnt);
-				result_map.put("postId", postId);
-				result_map.put("contents", contents);
-				result_map.put("likeCnt", likeCnt);
-				result_map.put("postedAt", postedAt);
-				result_map.put("thumbImg", thumbImg);
-				result_map.put("shortCode", shortCode);
-				result_map.put("result", true);
-				result_map.put("userNum", userNum);
-				result_map.put("videoViewCnt", videoViewCnt);
-				result_map.put("url", url);
-				result_map.put("type", type);
 			} catch (Exception e) {
 				log.error("오류 발생!: " + url + " 크롤링 중 오류 발생");
 				e.printStackTrace();
@@ -236,7 +370,7 @@ public class InstagramCrawlingServiceImpl implements InstagramCrawlingService {
 		
 		// 계정 정보 가져오기
 		Random random = new Random();
-		List<AccountEntity> account_list = accountRepository.findByBlock(1);
+		List<AccountEntity> account_list = accountRepository.findByBlock(2);
 		AccountEntity profile_entity = account_list.get(random.nextInt(account_list.size()));
 		
 		// 드라이버 설정
@@ -296,6 +430,8 @@ public class InstagramCrawlingServiceImpl implements InstagramCrawlingService {
 					
 					return result_map;
 				}
+				
+				Thread.sleep(4000);
 				
 				// 계정 고유 번호
 				String identifier = "";
@@ -389,7 +525,7 @@ public class InstagramCrawlingServiceImpl implements InstagramCrawlingService {
 		
 		// 계정 정보 가져오기
 		Random random = new Random();
-		List<AccountEntity> account_list = accountRepository.findByBlock(1);
+		List<AccountEntity> account_list = accountRepository.findByBlock(2);
 		AccountEntity profile_entity = account_list.get(random.nextInt(account_list.size()));
 		
 		// 드라이버 설정
@@ -494,6 +630,435 @@ public class InstagramCrawlingServiceImpl implements InstagramCrawlingService {
 		
 		stop_watch.stop();
 		log.info("--- 인스타그램 목록 스크린샷 완료(" + stop_watch.getTotalTimeSeconds() + "초) ---");
+		
+		return result_map;
+	}
+
+	/* 인스타그램 활동 점수 - 계정 */
+	@Override
+	public Map<String, Object> getInstagramScoringAccount(String url) {
+		log.info("--- 인스타그램 계정 활동 점수 호출: " + url + " ---");
+		
+		StopWatch stop_watch = new StopWatch();
+		stop_watch.start();
+		
+		Map<String, Object> result_map = new HashMap<String, Object>();
+		
+		// 인스타그램 계정 정보 가져오기
+		Random random = new Random();
+		List<AccountEntity> account_list = accountRepository.findByBlock(2);
+		AccountEntity profile_entity = account_list.get(random.nextInt(account_list.size()));
+		
+		// 드라이버 설정
+		ChromeDriver driver = new ChromeDriver(SnsCrawlingUtil.setChromeDriver(profile_entity, false));
+		
+		// 입력값 검증
+		if (SnsCrawlingUtil.chkNull(url).equals("")) {
+			log.error("오류 발생: URL 미입력");
+			
+			if (driver != null) {
+				driver.quit();
+			}
+			
+			result_map.put("result", false);
+			result_map.put("message", "URL 미입력");
+			
+			return result_map;
+		}
+		
+		if (!"/".equals(url.substring(url.length() - 1))) {
+			url += "/";
+		}
+		
+		try {
+			// 크롤링 시작
+			driver.get(url + "?__a=1");
+			String json_string = driver.getPageSource();
+			
+			json_string = json_string.replace("<html><head></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">", "");
+			json_string = json_string.replace("</pre></body></html>", "");
+			
+			// JSON 형식에 따른 파싱 분류
+			if (json_string.indexOf("graphql") > -1) {
+				// 'graphql' 형식
+				JSONParser parser = new JSONParser();
+				JSONObject json_object = new JSONObject();
+				
+				try {
+					json_object = (JSONObject) parser.parse(json_string);
+					json_object = (JSONObject) json_object.get("graphql");
+					json_object = (JSONObject) json_object.get("user");
+				} catch (Exception e) {
+					log.error("오류 발생!: " + url + " 정보 찾을 수 없음");
+					
+					if (driver != null) {
+						driver.quit();
+					}
+					
+					result_map.put("proxy", profile_entity.getProxy());
+					result_map.put("account", profile_entity.getId());
+					result_map.put("url", url);
+					result_map.put("result", false);
+					result_map.put("message", "정보 찾을 수 없음");
+					
+					return result_map;
+				}
+				
+				Thread.sleep(4000);
+				
+				// 사용자명
+				String username = json_object.get("username").toString();
+				
+				// 프로필 사진 URL
+				String profile_pic_url = json_object.get("profile_pic_url").toString();
+				profile_pic_url = profile_pic_url.replaceAll("&amp;", "&");
+				
+				// 팔로워 수
+				JSONObject json_object_followed_by_count = (JSONObject) json_object.get("edge_followed_by");
+				int followed_by_count = Integer.parseInt(json_object_followed_by_count.get("count").toString());
+				
+				// 전체 정보 취합
+				Map<String, Object> counts_map = new HashMap<>();
+				counts_map.put("followed_by", followed_by_count);
+				
+				Map<String, Object> data_map = new HashMap<>();
+				data_map.put("username", username);
+				data_map.put("profile_picture", profile_pic_url);
+				data_map.put("counts", counts_map);
+				
+				result_map.put("result", true);
+				result_map.put("data", data_map);
+			} else {
+				// 'items' 형식
+				JSONParser parser = new JSONParser();
+				JSONObject json_object = (JSONObject) parser.parse(json_string);
+				
+				try {
+					JSONArray json_array_items = (JSONArray) json_object.get("items");
+					json_object = (JSONObject) json_array_items.get(0);
+				} catch (Exception e) {
+					log.error("오류 발생!: " + url + " 정보 찾을 수 없음");
+					
+					if (driver != null) {
+						driver.quit();
+					}
+					
+					result_map.put("proxy", profile_entity.getProxy());
+					result_map.put("account", profile_entity.getId());
+					result_map.put("url", url);
+					result_map.put("result", false);
+					result_map.put("message", "정보 찾을 수 없음");
+					
+					return result_map;
+				}
+				
+				Thread.sleep(4000);
+				
+				// 작성자 이름
+				JSONObject json_object_user = (JSONObject) json_object.get("user");
+				String username = json_object_user.get("username").toString();
+				
+				// 사용자명으로 추출 작업 진행
+				driver.get("https://www.instagram.com/" + username + "/?__a=1");
+				json_string = driver.getPageSource();
+				
+				json_string = json_string.replace("<html><head></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">", "");
+				json_string = json_string.replace("</pre></body></html>", "");
+				
+				try {
+					json_object = (JSONObject) parser.parse(json_string);
+					json_object = (JSONObject) json_object.get("graphql");
+					json_object = (JSONObject) json_object.get("user");
+				} catch (Exception e) {
+					log.error("오류 발생!: " + username + " 계정 없음");
+					
+					if (driver != null) {
+						driver.quit();
+					}
+					
+					result_map.put("proxy", profile_entity.getProxy());
+					result_map.put("account", profile_entity.getId());
+					result_map.put("username", username);
+					result_map.put("result", false);
+					result_map.put("message", "계정 없음");
+					
+					return result_map;
+				}
+				
+				// 프로필 사진 URL
+				String profile_pic_url = json_object.get("profile_pic_url").toString();
+				profile_pic_url = profile_pic_url.replaceAll("&amp;", "&");
+				
+				// 팔로워 수
+				JSONObject json_object_followed_by_count = (JSONObject) json_object.get("edge_followed_by");
+				int followed_by_count = Integer.parseInt(json_object_followed_by_count.get("count").toString());
+				
+				// 전체 정보 취합
+				Map<String, Object> counts_map = new HashMap<>();
+				counts_map.put("followed_by", followed_by_count);
+				
+				Map<String, Object> data_map = new HashMap<>();
+				data_map.put("username", username);
+				data_map.put("profile_picture", profile_pic_url);
+				data_map.put("counts", counts_map);
+				
+				result_map.put("result", true);
+				result_map.put("data", data_map);
+			}
+		} catch (Exception e) {
+			log.error("오류 발생: 크롤링 중 오류 발생");
+			e.printStackTrace();
+			
+			if (driver != null) {
+				driver.quit();
+			}
+			
+			result_map.put("result", false);
+			result_map.put("url", url);
+			result_map.put("message", "크롤링 중 오류 발생");
+			
+			return result_map;
+		} finally {
+			if (driver != null) {
+				driver.quit();
+			}
+		}
+		
+		stop_watch.stop();
+		log.info("--- 인스타그램 계정 활동 점수 처리 완료(" + stop_watch.getTotalTimeSeconds() + "초) ---");
+		
+		return result_map;
+	}
+	
+	/* 인스타그램 활동 점수 - 게시물 */
+	@Override
+	public Map<String, Object> getInstagramScoringMedia(String url) {
+		log.info("--- 인스타그램 게시물 활동 점수 호출: " + url + " ---");
+		
+		StopWatch stop_watch = new StopWatch();
+		stop_watch.start();
+		
+		Map<String, Object> result_map = new HashMap<String, Object>();
+		
+		// 인스타그램 계정 정보 가져오기
+		Random random = new Random();
+		List<AccountEntity> account_list = accountRepository.findByBlock(2);
+		AccountEntity profile_entity = account_list.get(random.nextInt(account_list.size()));
+		
+		// 드라이버 설정
+		ChromeDriver driver = new ChromeDriver(SnsCrawlingUtil.setChromeDriver(profile_entity, false));
+		
+		// 입력값 검증
+		if (SnsCrawlingUtil.chkNull(url).equals("")) {
+			log.error("오류 발생: URL 미입력");
+			
+			if (driver != null) {
+				driver.quit();
+			}
+			
+			result_map.put("result", false);
+			result_map.put("message", "URL 미입력");
+			
+			return result_map;
+		}
+		
+		if (!"/".equals(url.substring(url.length() - 1))) {
+			url += "/";
+		}
+		
+		try {
+			// 크롤링 시작
+			driver.get(url + "?__a=1");
+			String json_string = driver.getPageSource();
+			
+			json_string = json_string.replace("<html><head></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">", "");
+			json_string = json_string.replace("</pre></body></html>", "");
+			
+			// JSON 형식에 따른 파싱 분류
+			if (json_string.indexOf("graphql") > -1) {
+				// 'graphql' 형식
+				JSONParser parser = new JSONParser();
+				JSONObject json_object = new JSONObject();
+				
+				try {
+					json_object = (JSONObject) parser.parse(json_string);
+					json_object = (JSONObject) json_object.get("graphql");
+					json_object = (JSONObject) json_object.get("user");
+				} catch (Exception e) {
+					log.error("오류 발생!: " + url + " 정보 찾을 수 없음");
+					
+					if (driver != null) {
+						driver.quit();
+					}
+					
+					result_map.put("proxy", profile_entity.getProxy());
+					result_map.put("account", profile_entity.getId());
+					result_map.put("url", url);
+					result_map.put("result", false);
+					result_map.put("message", "정보 찾을 수 없음");
+					
+					return result_map;
+				}
+				
+				Thread.sleep(4000);
+				
+				// 활동 점수 처리
+				JSONObject json_object_owner_to_timeline_media = (JSONObject) json_object.get("edge_owner_to_timeline_media");
+				JSONArray json_array_owner_to_timeline_media_edges = (JSONArray) json_object_owner_to_timeline_media.get("edges");
+				JSONObject json_object_node = new JSONObject();
+				List<Map<String, Object>> data_map_list = new ArrayList<>();
+				
+				for (int i=0; i<json_array_owner_to_timeline_media_edges.size(); i++) {
+					json_object_node = (JSONObject) json_array_owner_to_timeline_media_edges.get(i);
+					json_object_node = (JSONObject) json_object_node.get("node");
+					
+					// 작성일
+					String created_time = json_object_node.get("taken_at_timestamp").toString();
+					
+					// 댓글 수
+					JSONObject json_object_count = (JSONObject) json_object_node.get("edge_media_to_comment");
+					int count_comments = Integer.parseInt(json_object_count.get("count").toString());
+					
+					// 좋아요 수
+					json_object_count = (JSONObject) json_object_node.get("edge_liked_by");
+					int count_likes = Integer.parseInt(json_object_count.get("count").toString());
+					
+					// data 정보 취합
+					Map<String, Object> comments_map = new HashMap<>();
+					comments_map.put("count", count_comments);
+					
+					Map<String, Object> likes_map = new HashMap<>();
+					likes_map.put("count", count_likes);
+					
+					Map<String, Object> data_map = new HashMap<>();
+					data_map.put("created_time", created_time);
+					data_map.put("comments", comments_map);
+					data_map.put("likes", likes_map);
+					
+					data_map_list.add(data_map);
+				}
+				
+				// 전체 정보 취합
+				result_map.put("result", true);
+				result_map.put("data", data_map_list);
+			} else {
+				// 'items' 형식
+				JSONParser parser = new JSONParser();
+				JSONObject json_object = (JSONObject) parser.parse(json_string);
+				
+				try {
+					JSONArray json_array_items = (JSONArray) json_object.get("items");
+					json_object = (JSONObject) json_array_items.get(0);
+				} catch (Exception e) {
+					log.error("오류 발생!: " + url + " 정보 찾을 수 없음");
+					
+					if (driver != null) {
+						driver.quit();
+					}
+					
+					result_map.put("proxy", profile_entity.getProxy());
+					result_map.put("account", profile_entity.getId());
+					result_map.put("url", url);
+					result_map.put("result", false);
+					result_map.put("message", "정보 찾을 수 없음");
+					
+					return result_map;
+				}
+				
+				Thread.sleep(4000);
+				
+				// 사용자명
+				JSONObject json_object_user = (JSONObject) json_object.get("user");
+				String username = json_object_user.get("username").toString();
+				
+				// 사용자명으로 추출 작업 진행
+				driver.get("https://www.instagram.com/" + username + "/?__a=1");
+				json_string = driver.getPageSource();
+				
+				json_string = json_string.replace("<html><head></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">", "");
+				json_string = json_string.replace("</pre></body></html>", "");
+				
+				try {
+					json_object = (JSONObject) parser.parse(json_string);
+					json_object = (JSONObject) json_object.get("graphql");
+					json_object = (JSONObject) json_object.get("user");
+				} catch (Exception e) {
+					log.error("오류 발생!: " + username + " 계정 없음");
+					
+					if (driver != null) {
+						driver.quit();
+					}
+					
+					result_map.put("proxy", profile_entity.getProxy());
+					result_map.put("account", profile_entity.getId());
+					result_map.put("username", username);
+					result_map.put("result", false);
+					result_map.put("message", "계정 없음");
+					
+					return result_map;
+				}
+				
+				// 활동 점수 처리
+				JSONObject json_object_owner_to_timeline_media = (JSONObject) json_object.get("edge_owner_to_timeline_media");
+				JSONArray json_array_owner_to_timeline_media_edges = (JSONArray) json_object_owner_to_timeline_media.get("edges");
+				JSONObject json_object_node = new JSONObject();
+				List<Map<String, Object>> data_map_list = new ArrayList<>();
+				
+				for (int i=0; i<json_array_owner_to_timeline_media_edges.size(); i++) {
+					json_object_node = (JSONObject) json_array_owner_to_timeline_media_edges.get(i);
+					json_object_node = (JSONObject) json_object_node.get("node");
+					
+					// 작성일
+					String created_time = json_object_node.get("taken_at_timestamp").toString();
+					
+					// 댓글 수
+					JSONObject json_object_count = (JSONObject) json_object_node.get("edge_media_to_comment");
+					int count_comments = Integer.parseInt(json_object_count.get("count").toString());
+					
+					// 좋아요 수
+					json_object_count = (JSONObject) json_object_node.get("edge_liked_by");
+					int count_likes = Integer.parseInt(json_object_count.get("count").toString());
+					
+					// data 정보 취합
+					Map<String, Object> comments_map = new HashMap<>();
+					comments_map.put("count", count_comments);
+					
+					Map<String, Object> likes_map = new HashMap<>();
+					likes_map.put("count", count_likes);
+					
+					Map<String, Object> data_map = new HashMap<>();
+					data_map.put("created_time", created_time);
+					data_map.put("comments", comments_map);
+					data_map.put("likes", likes_map);
+					
+					data_map_list.add(data_map);
+				}
+				
+				// 전체 정보 취합
+				result_map.put("result", true);
+				result_map.put("data", data_map_list);
+			}
+		} catch (Exception e) {
+			log.error("오류 발생: 크롤링 중 오류 발생");
+			e.printStackTrace();
+			
+			if (driver != null) {
+				driver.quit();
+			}
+			
+			result_map.put("result", false);
+			result_map.put("url", url);
+			result_map.put("message", "크롤링 중 오류 발생");
+			
+			return result_map;
+		} finally {
+			if (driver != null) {
+				driver.quit();
+			}
+		}
+		
+		stop_watch.stop();
+		log.info("--- 인스타그램 게시물 활동 점수 처리 완료(" + stop_watch.getTotalTimeSeconds() + "초) ---");
 		
 		return result_map;
 	}

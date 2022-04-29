@@ -35,4 +35,16 @@ public class InstagramCrawlingController {
 		return instagramCrawlingService.getInstagramListScreenshot(query_string, url);
 	}
 	
+	/* 인스타그램 활동 점수 - 계정 */
+	@GetMapping(value = "/scoring_account")
+	public Map<String, Object> restApiInstagramScoringAccount(@RequestParam String url) {
+		return instagramCrawlingService.getInstagramScoringAccount(url);
+	}
+	
+	/* 인스타그램 활동 점수 - 게시물 */
+	@GetMapping(value = "/scoring_media")
+	public Map<String, Object> restApiInstagramScoringMedia(@RequestParam String url) {
+		return instagramCrawlingService.getInstagramScoringMedia(url);
+	}
+	
 }

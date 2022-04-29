@@ -10,4 +10,8 @@ public interface InstagramCrawlingService {
 
 	Map<String, Object> getInstagramListScreenshot(String query_string, String url);
 
+	Map<String, Object> getInstagramScoringAccount(String url);
+
+	Map<String, Object> getInstagramScoringMedia(String url);
+
 }
